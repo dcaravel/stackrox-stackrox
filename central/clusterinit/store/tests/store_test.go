@@ -6,7 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
+	randpkg "math/rand/v2"
 	"testing"
 	"time"
 
@@ -19,6 +19,10 @@ import (
 	"github.com/stackrox/rox/pkg/uuid"
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+var (
+	rand = randpkg.New(randpkg.NewPCG(3, 14159))
 )
 
 func TestClusterInitStore(t *testing.T) {
@@ -131,7 +135,7 @@ func (s *clusterInitStoreTestSuite) TestCrsWithoutMaxRegistrations() {
 	crsId := uuid.NewV4().String()
 	crsMeta := &storage.InitBundleMeta{
 		Id:        crsId,
-		Name:      fmt.Sprintf("test-crs-unlimited-1-%d", rand.Intn(10000)),
+		Name:      fmt.Sprintf("test-crs-unlimited-1-%d", rand.IntN(10000)),
 		CreatedAt: timestamppb.New(time.Now()),
 		Version:   storage.InitBundleMeta_CRS,
 	}
@@ -159,7 +163,7 @@ func (s *clusterInitStoreTestSuite) TestCrsAutoRevocationOneShot() {
 	crsId := uuid.NewV4().String()
 	crsMeta := &storage.InitBundleMeta{
 		Id:               crsId,
-		Name:             fmt.Sprintf("test-crs-auto-revocation-1-%d", rand.Intn(10000)),
+		Name:             fmt.Sprintf("test-crs-auto-revocation-1-%d", rand.IntN(10000)),
 		CreatedAt:        timestamppb.New(time.Now()),
 		Version:          storage.InitBundleMeta_CRS,
 		MaxRegistrations: 1,
@@ -188,7 +192,7 @@ func (s *clusterInitStoreTestSuite) TestCrsAutoRevocationAfterTwoRegistrations()
 	crsId := uuid.NewV4().String()
 	crsMeta := &storage.InitBundleMeta{
 		Id:               crsId,
-		Name:             fmt.Sprintf("test-crs-auto-revocation-2-%d", rand.Intn(10000)),
+		Name:             fmt.Sprintf("test-crs-auto-revocation-2-%d", rand.IntN(10000)),
 		CreatedAt:        timestamppb.New(time.Now()),
 		Version:          storage.InitBundleMeta_CRS,
 		MaxRegistrations: 2,
