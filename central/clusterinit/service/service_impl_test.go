@@ -173,8 +173,6 @@ func TestGenerateCRSWithValidForAndValidUntil(t *testing.T) {
 	assert.NoError(t, err, "parsing RFC3339 timestamp failed")
 	reqValidFor := 10 * time.Minute
 
-	mockBackend.EXPECT().IssueCRS(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-
 	request := &v1.CRSGenRequestExtended{
 		Name:       "secured-cluster",
 		ValidUntil: timestamppb.New(reqValidUntil),
