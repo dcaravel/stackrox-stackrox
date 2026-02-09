@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"os"
 	"strings"
 	"testing"
@@ -356,7 +355,7 @@ func (s *clusterInitBackendTestSuite) TestCRSLifecycle() {
 }
 
 func (s *clusterInitBackendTestSuite) TestCrsIssuingWithTooLargeRegistrationLimit() {
-	crsName := fmt.Sprintf("test-crs-exceeding-limit-1-%d", rand.Intn(10000))
+	crsName := "test-crs-exceeding-limit"
 	_, err := s.backend.IssueCRS(s.ctx, crsName, time.Time{}, 101)
 	s.Require().Error(err, "issuing CRS with maxRegistrations=101 succeeded.")
 }
