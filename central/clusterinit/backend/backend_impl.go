@@ -12,6 +12,7 @@ import (
 	"github.com/stackrox/rox/generated/storage"
 	"github.com/stackrox/rox/pkg/centralsensor"
 	"github.com/stackrox/rox/pkg/crs"
+	"github.com/stackrox/rox/pkg/errox"
 	"github.com/stackrox/rox/pkg/grpc/authn"
 	"github.com/stackrox/rox/pkg/mtls"
 	"github.com/stackrox/rox/pkg/protocompat"
@@ -171,7 +172,7 @@ func (b *backendImpl) IssueCRS(ctx context.Context, name string, validUntil time
 	}
 
 	if maxRegistrations > maxRegistrationsUpperLimit {
-		return nil, errors.Errorf("cluster registration limit must be in the range 0...%d", maxRegistrationsUpperLimit)
+		return nil, errox.InvalidArgs.Newf("cluster registration limit must be in the range 0...%d", maxRegistrationsUpperLimit)
 	}
 
 	caCert, err := b.certProvider.GetCA()
