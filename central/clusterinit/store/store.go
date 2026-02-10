@@ -121,6 +121,9 @@ func (w *storeImpl) Add(ctx context.Context, meta *storage.InitBundleMeta) error
 }
 
 func (w *storeImpl) Delete(ctx context.Context, id string) error {
+	w.uniqueUpdateMutex.Lock()
+	defer w.uniqueUpdateMutex.Unlock()
+
 	return w.store.Delete(ctx, id)
 }
 
