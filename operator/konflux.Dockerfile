@@ -17,7 +17,7 @@ ENV CI=1 GOFLAGS="" CGO_ENABLED=1
 RUN GOOS=linux GOARCH=$(go env GOARCH) scripts/go-build-file.sh operator/cmd/main.go image/bin/operator
 
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:latest@sha256:0242c82019281bfb1a078db61b3710251af550cc7bc98aa34a9a3211dba3d4d8
+FROM registry.access.redhat.com/ubi8/ubi-minimal:latest@sha256:de46044c1c8d595193316655c441f196cf885bda9fb97244679b458327c19142
 
 ARG BUILD_TAG
 
