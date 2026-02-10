@@ -214,17 +214,17 @@ func (w *storeImpl) InitiateClusterRegistration(ctx context.Context, initArtifac
 	if registrationsCompletedSet.Contains(clusterName) {
 		return errors.Errorf("cluster %s already registered with cluster registration secret %s/%q", clusterName, crsMeta.GetId(), crsMeta.GetName())
 	}
-	if registrationsInitiatedSet.Contains(clusterName) {
-		log.Warnf("Attempting to initiate registration of cluster %s, even though it is already associated with CRS %s.", clusterName, crsMeta.GetId())
-	} else {
-		_ = registrationsInitiatedSet.Add(clusterName)
-		crsMeta.RegistrationsInitiated = registrationsInitiatedSet.AsSlice()
-		if err := w.store.Upsert(ctx, crsMeta); err != nil {
-			return errors.Wrapf(err, "updating meta data for cluster registration secret %s/%q", crsMeta.GetId(), crsMeta.GetName())
-		}
 
-		log.Infof("Added cluster %s to list of initiated registrations for CRS %s (%s).", clusterName, crsMeta.GetName(), crsMeta.GetId())
+	if !registrationsInitiatedSet.Add(clusterName) {
+		log.Warnf("Attempting to initiate registration of cluster %s, even though it is already associated with CRS %s.", clusterName, crsMeta.GetId())
+		return nil
 	}
+
+	crsMeta.RegistrationsInitiated = registrationsInitiatedSet.AsSlice()
+	if err := w.store.Upsert(ctx, crsMeta); err != nil {
+		return errors.Wrapf(err, "updating meta data for cluster registration secret %s/%q", crsMeta.GetId(), crsMeta.GetName())
+	}
+	log.Infof("Added cluster %s to list of initiated registrations for CRS %s (%s).", clusterName, crsMeta.GetName(), crsMeta.GetId())
 
 	return nil
 }
