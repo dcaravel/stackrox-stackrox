@@ -64,6 +64,18 @@ func (s *blockingLaneSuite) TestNewLaneOptions() {
 		laneImpl, ok := lane.(*blockingLane)
 		require.True(s.T(), ok)
 		assert.NotNil(s.T(), laneImpl.newConsumerFn)
+
+		// Verify the custom consumer is actually used when registering
+		err := lane.RegisterConsumer(pubsub.DefaultConsumer, pubsub.DefaultTopic, func(e pubsub.Event) error {
+			return nil
+		})
+		require.NoError(s.T(), err)
+
+		// Verify the consumer was created using our custom constructor
+		consumers := laneImpl.consumers[pubsub.DefaultTopic]
+		require.Len(s.T(), consumers, 1)
+		_, ok = consumers[0].(*testCustomConsumer)
+		assert.True(s.T(), ok, "expected consumer to be *testCustomConsumer, proving custom constructor was used")
 	})
 }
 
