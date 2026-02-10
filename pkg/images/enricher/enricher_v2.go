@@ -35,16 +35,17 @@ type ImageEnricherV2 interface {
 type ImageGetterV2 func(ctx context.Context, id string) (*storage.ImageV2, bool, error)
 
 // BaseImageGetterV2 will be used to get base images of a given image
-type BaseImageGetterV2 func(ctx context.Context, layers []string) ([]*storage.BaseImageInfo, error)
+type BaseImageGetterV2 func(ctx context.Context, layers []string) ([]*storage.BaseImage, error)
 
 // NewV2 returns a new ImageEnricherV2 instance for the given subsystem.
 // (The subsystem is just used for Prometheus metrics.)
-func NewV2(cvesSuppressor CVESuppressor, is integration.Set, subsystem pkgMetrics.Subsystem, metadataCache cache.ImageMetadata, baseImageGetter BaseImageGetterV2,
+func NewV2(cvesSuppressor CVESuppressor, cveInfoEnricher CVEInfoEnricher, is integration.Set, subsystem pkgMetrics.Subsystem, metadataCache cache.ImageMetadata, baseImageGetter BaseImageGetterV2,
 	imageGetter ImageGetterV2, healthReporter integrationhealth.Reporter,
 	signatureIntegrationGetter SignatureIntegrationGetter, scanDelegator delegatedregistry.Delegator) ImageEnricherV2 {
 	enricher := &enricherV2Impl{
-		cvesSuppressor: cvesSuppressor,
-		integrations:   is,
+		cvesSuppressor:  cvesSuppressor,
+		cveInfoEnricher: cveInfoEnricher,
+		integrations:    is,
 
 		// number of consecutive errors per registry or scanner to ascertain health of the integration
 		errorsPerRegistry:         make(map[registryTypes.ImageRegistry]int32),
