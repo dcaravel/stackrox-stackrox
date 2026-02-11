@@ -1,30 +1,120 @@
-name: auto-merge
+name: Dependabot Auto-Merge
 
 on:
-  pull_request_target:
-    types:
-    - labeled
+  check_run:
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
-  auto-merge-minor:
-    name: Auto-merge semver minor and patch bumps
+  auto-merge:
+    name: Enable auto-merge for eligible Dependabot PRs
     runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]' && github.event.label.name == 'auto-merge'
-    steps:
-    - uses: ahmadnassri/action-dependabot-auto-merge@v2.6
-      with:
-        github-token: '${{ secrets.RHACS_BOT_GITHUB_TOKEN }}'
-        command: "squash and merge"
-        approve: true
-        target: minor
+    if: github.repository_owner == 'stackrox'
 
-  auto-merge-any:
-    name: Auto-merge any version bumps
-    runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]' && github.event.label.name == 'auto-merge-any'
     steps:
-    - uses: ahmadnassri/action-dependabot-auto-merge@v2.6
-      with:
-        github-token: '${{ secrets.RHACS_BOT_GITHUB_TOKEN }}'
-        command: "squash and merge"
-        approve: true
+      - name: Find and process Dependabot PRs
+        env:
+          GH_TOKEN: ${{ secrets.RHACS_BOT_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Extract repo owner and name
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+
+          # Get the commit SHA from the check run event
+          # For workflow_dispatch, skip PR finding
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "::notice::Manual workflow dispatch - no PRs to process"
+            exit 0
+          fi
+
+          COMMIT_SHA="${{ github.event.check_run.head_sha }}"
+          echo "::notice::Processing check_run for commit: $COMMIT_SHA"
+
+          # Get PRs associated with this commit
+          PR_NUMBERS=$(gh api "/repos/${{ github.repository }}/commits/$COMMIT_SHA/pulls" \
+            --jq '.[].number' || echo "")
+
+          if [[ -z "$PR_NUMBERS" ]]; then
+            echo "::notice::No PRs found for commit $COMMIT_SHA"
+            exit 0
+          fi
+
+          # Process each PR
+          for PR_NUMBER in $PR_NUMBERS; do
+            # Get PR details
+            PR_DATA=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" \
+              --json author,labels,isDraft,mergeable \
+              --jq '{author: .author.login, labels: [.labels[].name], isDraft, mergeable}')
+
+            AUTHOR=$(echo "$PR_DATA" | jq -r '.author')
+            HAS_AUTO_MERGE=$(echo "$PR_DATA" | jq -r '(.labels | contains(["auto-merge"]))')
+            IS_DRAFT=$(echo "$PR_DATA" | jq -r '.isDraft')
+            IS_MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable')
+
+            # Skip if not a Dependabot PR with auto-merge label
+            if [[ "$AUTHOR" != "dependabot[bot]" ]]; then
+              echo "::notice::Skipping PR #$PR_NUMBER - not from Dependabot (author=$AUTHOR)"
+              continue
+            fi
+
+            if [[ "$HAS_AUTO_MERGE" != "true" ]]; then
+              echo "::notice::Skipping PR #$PR_NUMBER - no auto-merge label"
+              continue
+            fi
+
+            if [[ "$IS_DRAFT" == "true" ]]; then
+              echo "::notice::Skipping PR #$PR_NUMBER - is draft"
+              continue
+            fi
+
+            if [[ "$IS_MERGEABLE" != "MERGEABLE" ]]; then
+              echo "::notice::Skipping PR #$PR_NUMBER - not mergeable (status=$IS_MERGEABLE)"
+              continue
+            fi
+
+            echo "::notice::Processing eligible PR #$PR_NUMBER"
+
+            # Check if all checks have passed using GraphQL statusCheckRollup
+            STATUS=$(gh api graphql -F owner="$OWNER" -F repo="$REPO" -F number="$PR_NUMBER" -f query='
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    commits(last: 1) {
+                      nodes {
+                        commit {
+                          statusCheckRollup {
+                            state
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ' --jq '.data.repository.pullRequest.commits.nodes[0].commit.statusCheckRollup.state' || echo "null")
+
+            echo "::notice::PR #$PR_NUMBER status check rollup: $STATUS"
+
+            # Only proceed if all checks passed
+            if [[ "$STATUS" != "SUCCESS" ]]; then
+              echo "::warning::Skipping PR #$PR_NUMBER - checks not passed (status: $STATUS)"
+              continue
+            fi
+
+            # All conditions met - enable auto-merge
+            echo "::notice::Approving PR #$PR_NUMBER"
+            gh pr review --repo "${{ github.repository }}" \
+              --approve "$PR_NUMBER" || true
+
+            echo "::notice::Enabling auto-merge for PR #$PR_NUMBER"
+            gh pr merge --repo "${{ github.repository }}" \
+              --auto --squash "$PR_NUMBER"
+
+            echo "::notice::✓ Auto-merge enabled for PR #$PR_NUMBER"
+          done
