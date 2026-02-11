@@ -27,14 +27,18 @@ var (
 // Singleton returns a new auth service instance.
 func Singleton() Service {
 	once.Do(func() {
-		s = &serviceImpl{
-			issuer: getTokenIssuer(jwt.IssuerFactorySingleton()),
-			roleManager: &roleManager{
+		policy, err := newTokenPolicyFromEnv()
+		utils.Must(err)
+
+		s = newServiceImpl(
+			getTokenIssuer(jwt.IssuerFactorySingleton()),
+			&roleManager{
 				clusterStore: clusterStore.Singleton(),
 				roleStore:    roleStore.Singleton(),
 			},
-			now: time.Now,
-		}
+			time.Now,
+			policy,
+		)
 	})
 	return s
 }

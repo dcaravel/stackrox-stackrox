@@ -56,7 +56,23 @@ type serviceImpl struct {
 
 	now func() time.Time
 
+	policy *tokenPolicy
+
 	v1.UnimplementedTokenServiceServer
+}
+
+// newServiceImpl creates a serviceImpl and panics if policy is nil.
+// This prevents nil-pointer dereferences when policy methods are called.
+func newServiceImpl(issuer tokens.Issuer, rm *roleManager, now func() time.Time, policy *tokenPolicy) *serviceImpl {
+	if policy == nil {
+		panic("serviceImpl requires a non-nil token policy")
+	}
+	return &serviceImpl{
+		issuer:      issuer,
+		roleManager: rm,
+		now:         now,
+		policy:      policy,
+	}
 }
 
 // RegisterServiceServer registers this service with the given gRPC Server.
@@ -80,6 +96,28 @@ func (s *serviceImpl) GenerateTokenForPermissionsAndScope(
 ) (*v1.GenerateTokenForPermissionsAndScopeResponse, error) {
 	// Enable dynamic RBAC pruning.
 	pruning.EnableDynamicRBACPruning()
+
+	// Extract and validate sensor identity for cluster scope enforcement.
+	identity := authn.IdentityFromContextOrNil(ctx)
+	if identity == nil || identity.Service() == nil {
+		return nil, errox.NotAuthorized.New("missing service identity")
+	}
+	if identity.Service().GetType() != storage.ServiceType_SENSOR_SERVICE {
+		return nil, errox.NotAuthorized.CausedByf(
+			"only sensor may access this API, unexpected service type %q",
+			identity.Service().GetType())
+	}
+	sensorClusterID := identity.Service().GetId()
+
+	// Validate requested permissions against policy.
+	if err := s.policy.validatePermissions(req.GetPermissions()); err != nil {
+		return nil, err
+	}
+
+	// Enforce cluster scope to sensor's own cluster.
+	if err := s.policy.enforceClusterScope(req.GetClusterScopes(), sensorClusterID); err != nil {
+		return nil, err
+	}
 
 	// Calculate expiry first so we can set it on the RBAC objects.
 	expiresAt, err := s.getExpiresAt(ctx, req)
@@ -123,5 +161,6 @@ func (s *serviceImpl) getExpiresAt(
 	if duration <= 0 {
 		return time.Time{}, errox.InvalidArgs.CausedBy("token validity duration should be positive")
 	}
+	duration = s.policy.capLifetime(duration)
 	return s.now().Add(duration), nil
 }
