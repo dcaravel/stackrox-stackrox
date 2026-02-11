@@ -142,7 +142,7 @@ func TestMatchesDeploymentExclusion(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			compiledExclusions := make([]*compiledExclusion, 0, len(c.policy.GetExclusions()))
 			for _, w := range c.policy.GetExclusions() {
-				cw, err := newCompiledExclusion(w)
+				cw, err := newCompiledExclusion(w, nil, nil)
 				require.NoError(t, err)
 				compiledExclusions = append(compiledExclusions, cw)
 			}

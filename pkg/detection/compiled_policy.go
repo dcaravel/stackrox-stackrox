@@ -31,14 +31,16 @@ type CompiledPolicy interface {
 }
 
 // newCompiledPolicy creates and returns a compiled policy from the policy and legacySearchBasedMatcher.
-func newCompiledPolicy(policy *storage.Policy) (CompiledPolicy, error) {
+func newCompiledPolicy(policy *storage.Policy, clusterLabelProvider scopecomp.ClusterLabelProvider, namespaceLabelProvider scopecomp.NamespaceLabelProvider) (CompiledPolicy, error) {
 	compiled := &compiledPolicy{
 		policy: policy,
 	}
 
 	exclusions := make([]*compiledExclusion, 0, len(policy.GetExclusions()))
 	for _, w := range policy.GetExclusions() {
-		w, err := newCompiledExclusion(w)
+		// Note: Exclusions do not support cluster_label or namespace_label matching yet.
+		// Pass nil providers so exclusions fail closed if they have label matchers.
+		w, err := newCompiledExclusion(w, nil, nil)
 		if err != nil {
 			return nil, errors.Wrapf(err, "compiling exclusion list %+v for policy %s", w, policy.GetName())
 		}
@@ -47,7 +49,7 @@ func newCompiledPolicy(policy *storage.Policy) (CompiledPolicy, error) {
 
 	scopes := make([]*scopecomp.CompiledScope, 0, len(policy.GetScope()))
 	for _, s := range policy.GetScope() {
-		compiledScope, err := scopecomp.CompileScope(s, nil, nil)
+		compiledScope, err := scopecomp.CompileScope(s, clusterLabelProvider, namespaceLabelProvider)
 		if err != nil {
 			return nil, errors.Wrapf(err, "compiling scope %+v for policy %q", s, policy.GetName())
 		}
@@ -418,7 +420,7 @@ func (a *alwaysFalseMatcher) MatchString(_ string) bool {
 	return false
 }
 
-func newCompiledExclusion(exclusion *storage.Exclusion) (*compiledExclusion, error) {
+func newCompiledExclusion(exclusion *storage.Exclusion, clusterLabelProvider scopecomp.ClusterLabelProvider, namespaceLabelProvider scopecomp.NamespaceLabelProvider) (*compiledExclusion, error) {
 	cx := &compiledExclusion{
 		exclusion: exclusion,
 	}
@@ -437,7 +439,7 @@ func newCompiledExclusion(exclusion *storage.Exclusion) (*compiledExclusion, err
 		}
 	}
 	if scope := exclusion.GetDeployment().GetScope(); scope != nil {
-		cs, err := scopecomp.CompileScope(exclusion.GetDeployment().GetScope(), nil, nil)
+		cs, err := scopecomp.CompileScope(exclusion.GetDeployment().GetScope(), clusterLabelProvider, namespaceLabelProvider)
 		if err != nil {
 			return nil, err
 		}

@@ -239,8 +239,8 @@ func (m *manager) ProcessNewSettings(newSettings *sensor.AdmissionControlSetting
 		return // no update
 	}
 
-	allRuntimePolicySet := detection.NewPolicySet()
-	runtimePoliciesWithDeployFields, runtimePoliciesWithoutDeployFields := detection.NewPolicySet(), detection.NewPolicySet()
+	allRuntimePolicySet := detection.NewPolicySet(nil, nil)
+	runtimePoliciesWithDeployFields, runtimePoliciesWithoutDeployFields := detection.NewPolicySet(nil, nil), detection.NewPolicySet(nil, nil)
 	for _, policy := range newSettings.GetRuntimePolicies().GetPolicies() {
 		if policyfields.ContainsScanRequiredFields(policy) && !newSettings.GetClusterConfig().GetAdmissionControllerConfig().GetScanInline() {
 			log.Warn(errors.ImageScanUnavailableMsg(policy))
@@ -266,7 +266,7 @@ func (m *manager) ProcessNewSettings(newSettings *sensor.AdmissionControlSetting
 	enforceOnCreates := newSettings.GetClusterConfig().GetAdmissionControllerConfig().GetEnabled()
 	enforceOnUpdates := newSettings.GetClusterConfig().GetAdmissionControllerConfig().GetEnforceOnUpdates()
 
-	deployTimePolicySet := detection.NewPolicySet()
+	deployTimePolicySet := detection.NewPolicySet(nil, nil)
 	if enforceOnCreates || enforceOnUpdates {
 		for _, policy := range newSettings.GetEnforcedDeployTimePolicies().GetPolicies() {
 			if policyfields.ContainsScanRequiredFields(policy) &&
