@@ -9,6 +9,7 @@ runs:
         echo "GOCACHE=$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
         echo "GOMODCACHE=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
         echo "GOARCH=$(go env GOARCH)" >> "$GITHUB_OUTPUT"
+        echo "TAG=$(make --quiet --no-print-directory tag)" >> "$GITHUB_OUTPUT"
       shell: bash
 
     # Save caches only on pushes to the default branch.
@@ -17,8 +18,7 @@ runs:
       if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
       uses: actions/cache@v5
       with:
-        path: |
-          ${{ steps.cache-paths.outputs.GOMODCACHE }}
+        path: ${{ steps.cache-paths.outputs.GOMODCACHE }}
         key: go-mod-v1-${{ hashFiles('**/go.sum') }}
 
     - name: Cache Go Dependencies
@@ -33,16 +33,15 @@ runs:
       if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
       uses: actions/cache@v5
       with:
-        path: |
-          ${{ steps.cache-paths.outputs.GOCACHE }}
-        key: go-build-v1-${{ github.job }}-${{ steps.cache-paths.outputs.GOARCH }}-${{ hashFiles('**/go.sum') }}
+        path: ${{ steps.cache-paths.outputs.GOCACHE }}
+        key: go-build-v1-${{ github.job }}-${{ steps.cache-paths.outputs.GOARCH }}-${{ steps.cache-paths.outputs.TAG }}
 
     - name: Cache Go Build
       if: ${{ !(github.event_name == 'push' && github.ref_name == github.event.repository.default_branch) }}
       uses: actions/cache/restore@v5
       with:
         path: ${{ steps.cache-paths.outputs.GOCACHE }}
-        key: go-build-v1-${{ github.job }}-${{ steps.cache-paths.outputs.GOARCH }}-${{ hashFiles('**/go.sum') }}
+        key: go-build-v1-${{ github.job }}-${{ steps.cache-paths.outputs.GOARCH }}-${{ steps.cache-paths.outputs.TAG }}
         restore-keys: go-build-v1-${{ github.job }}-${{ steps.cache-paths.outputs.GOARCH }}-
 
     - name: Download Go modules
