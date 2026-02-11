@@ -13,14 +13,15 @@ runs:
 
     # Save caches only on pushes to the default branch.
     # All other events (PRs, etc.) restore only.
-    - name: Cache Go Dependencies (save)
+    - name: Cache Go Dependencies
       if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
       uses: actions/cache@v5
       with:
-        path: ${{ steps.cache-paths.outputs.GOMODCACHE }}
+        path: |
+          ${{ steps.cache-paths.outputs.GOMODCACHE }}
         key: go-mod-v1-${{ hashFiles('**/go.sum') }}
 
-    - name: Cache Go Dependencies (restore)
+    - name: Cache Go Dependencies
       if: ${{ !(github.event_name == 'push' && github.ref_name == github.event.repository.default_branch) }}
       uses: actions/cache/restore@v5
       with:
@@ -28,14 +29,15 @@ runs:
         key: go-mod-v1-${{ hashFiles('**/go.sum') }}
         restore-keys: go-mod-v1-
 
-    - name: Cache Go Build (save)
+    - name: Cache Go Build
       if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
       uses: actions/cache@v5
       with:
-        path: ${{ steps.cache-paths.outputs.GOCACHE }}
+        path: |
+          ${{ steps.cache-paths.outputs.GOCACHE }}
         key: go-build-v1-${{ github.job }}-${{ steps.cache-paths.outputs.GOARCH }}-${{ hashFiles('**/go.sum') }}
 
-    - name: Cache Go Build (restore)
+    - name: Cache Go Build
       if: ${{ !(github.event_name == 'push' && github.ref_name == github.event.repository.default_branch) }}
       uses: actions/cache/restore@v5
       with:
