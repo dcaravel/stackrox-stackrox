@@ -28,7 +28,6 @@ on:
 
 jobs:
   parse-versions:
-    if: github.repository_owner == 'stackrox' && github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'pr-update-scanner-vulns')
     runs-on: ubuntu-latest
     outputs:
       versions: ${{ steps.set-versions.outputs.versions }}
@@ -82,22 +81,9 @@ jobs:
         ./.github/workflows/scripts/scanner-get-released-tags.sh | tee -a "$GITHUB_OUTPUT"
         echo "$EOF" >> "$GITHUB_OUTPUT"
 
-  prepare-environment:
-    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'pr-update-scanner-vulns')
-    runs-on: ubuntu-latest
-    outputs:
-      manual_url: ${{ steps.set-manual-url.outputs.manual_url }}
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v6
-      with:
-        fetch-depth: 0
-
   build-and-run:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     needs:
     - parse-versions
-    - prepare-environment
     runs-on: ubuntu-latest
     container:
       image: quay.io/stackrox-io/apollo-ci:scanner-test-0.5.1
