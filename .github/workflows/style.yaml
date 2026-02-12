@@ -140,8 +140,7 @@ jobs:
     - uses: actions/setup-go@v6
       with:
         go-version-file: 'tools/linters/go.mod'
-        cache: true
-        # cache: ${{ github.event_name == 'push' && github.ref_name == github.event.repository.default_branch }}
+        cache: false  # ~3,354 MB via setup-go; disabled to stay within 10 GB budget
 
     - name: Check Cache golangci-lint
       run: make golangci-lint-cache-status
