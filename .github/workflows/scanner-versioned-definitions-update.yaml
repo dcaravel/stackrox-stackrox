@@ -44,11 +44,6 @@ jobs:
       ROX_GIT_REF: ${{ matrix.ref }}
       STACKROX_RHEL_VEX_COMPRESSED_FILE_TIMEOUT: "10m"
     steps:
-    # Checkout master to get the latest local actions
-    - name: Checkout repository
-      uses: actions/checkout@v6
-      with:
-        fetch-depth: 0
 
     - name: Checkout specific reference
       uses: actions/checkout@v6
