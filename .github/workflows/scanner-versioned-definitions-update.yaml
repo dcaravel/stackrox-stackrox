@@ -27,13 +27,6 @@ jobs:
     needs:
     - parse-versions
     runs-on: ubuntu-latest
-    container:
-      image: quay.io/stackrox-io/apollo-ci:scanner-test-0.5.1
-      volumes:
-      # The updater makes heavy use of /tmp files.
-      - /tmp:/tmp
-      - /usr:/mnt/usr
-      - /opt:/mnt/opt
     strategy:
       fail-fast: false
       max-parallel: 1
