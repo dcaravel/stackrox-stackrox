@@ -1,0 +1,38 @@
+name: check-test
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: >
+          Sets the git reference to build a bundle that will be uploaded to the
+          release candidate version stream, appending `-rc` to the version
+          stream vN (eg. v2-rc).
+        required: false
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/stackrox-io/apollo-ci:scanner-test-0.5.1
+      volumes:
+      # The updater makes heavy use of /tmp files.
+      - /tmp:/tmp
+      - /usr:/mnt/usr
+      - /opt:/mnt/opt
+    env:
+      ROX_GIT_REF: ${{ github.event.inputs.ref || '' }}
+    steps:
+    # Checkout master to get the latest local actions
+    - name: Checkout repository
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: Checkout specific reference
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+        ref: ${{ env.ROX_GIT_REF }}
+
+  
