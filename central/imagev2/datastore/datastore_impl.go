@@ -23,7 +23,6 @@ import (
 	"github.com/stackrox/rox/pkg/scancomponent"
 	"github.com/stackrox/rox/pkg/search"
 	pkgSearch "github.com/stackrox/rox/pkg/search"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var (
@@ -118,26 +117,8 @@ func (ds *datastoreImpl) SearchListImages(ctx context.Context, q *v1.Query) ([]*
 
 	imgs := make([]*storage.ListImage, 0, len(results))
 	for _, r := range results {
-		img := &storage.ListImage{
-			Id:   r.Digest,
-			Name: r.Name,
-			SetComponents: &storage.ListImage_Components{
-				Components: r.ComponentCount,
-			},
-			SetCves: &storage.ListImage_Cves{
-				Cves: r.CVECount,
-			},
-			SetFixable: &storage.ListImage_FixableCves{
-				FixableCves: r.FixableCVECount,
-			},
-			Priority: ds.imageRanker.GetRankForID(r.Digest),
-		}
-		if r.Created != nil {
-			img.Created = timestamppb.New(*r.Created)
-		}
-		if r.LastUpdated != nil {
-			img.LastUpdated = timestamppb.New(*r.LastUpdated)
-		}
+		img := r.ToListImage()
+		img.Priority = ds.imageRanker.GetRankForID(r.Digest)
 		imgs = append(imgs, img)
 	}
 
