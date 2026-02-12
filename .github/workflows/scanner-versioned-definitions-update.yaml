@@ -25,6 +25,11 @@ on:
         - nvd-feeds
         required: true
         default: nvd-feeds
+      dry_run:
+        description: "Dry run mode - do not abort or set env vars if reference cannot be determined"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   parse-versions:
@@ -42,6 +47,7 @@ jobs:
         INPUT_GA_REF: ${{ github.event.inputs.ga_ref || '' }}
         INPUT_RC_REF: ${{ github.event.inputs.rc_ref || '' }}
         INPUT_STREAM: ${{ github.event.inputs.stream || '' }}
+        INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
       run: |
         set -o pipefail
 
@@ -64,16 +70,22 @@ jobs:
                 ref="$INPUT_RC_REF"
                 allow_rc=true
             fi
-            if [ -z "$ref" ]; then
-                echo >&2 "abort: invalid input: could not determine the reference"
-                exit 1
-            fi
 
-            # Configure environment to generate the matrix with versions and
-            # references.
-            export SCANNER_BUNDLE_STREAM="$INPUT_STREAM"
-            export SCANNER_BUNDLE_REFERENCE="$ref"
-            export SCANNER_RELEASE_ALLOW_RC="$allow_rc"
+            if [ -z "$ref" ]; then
+                if [ "$INPUT_DRY_RUN" = "true" ]; then
+                    echo "dry run: reference could not be determined, skipping env var configuration"
+                    # Skip setting env vars in dry run mode
+                else
+                    echo >&2 "abort: invalid input: could not determine the reference"
+                    exit 1
+                fi
+            else
+                # Configure environment to generate the matrix with versions and
+                # references.
+                export SCANNER_BUNDLE_STREAM="$INPUT_STREAM"
+                export SCANNER_BUNDLE_REFERENCE="$ref"
+                export SCANNER_RELEASE_ALLOW_RC="$allow_rc"
+            fi
         fi
 
         EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
