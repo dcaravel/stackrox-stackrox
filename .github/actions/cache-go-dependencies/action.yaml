@@ -1,5 +1,10 @@
 name: Cache Go Dependencies
 description: Cache Go Dependencies
+inputs:
+  save:
+    description: Whether this job saves caches on pushes to the default branch.
+    required: false
+    default: 'true'
 runs:
   using: composite
   steps:
@@ -15,17 +20,16 @@ runs:
     # Save caches only on pushes to the default branch.
     # All other events (PRs, etc.) restore only.
     # TODO(davdhacs): remove 'true ||' after validating warm cache on PR
-    - name: Cache Go Dependencies
-      if: true || github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+    - name: Cache Go Dependencies (save)
+      if: inputs.save == 'true' && (true || github.event_name == 'push' && github.ref_name == github.event.repository.default_branch)
       uses: actions/cache@v5
       with:
-        path: |
-          ${{ steps.cache-paths.outputs.GOMODCACHE }}
+        path: ${{ steps.cache-paths.outputs.GOMODCACHE }}
         key: go-mod-v1-${{ hashFiles('**/go.sum') }}
         restore-keys: go-mod-v1-
 
-    - name: Cache Go Dependencies
-      if: ${{ !(true || github.event_name == 'push' && github.ref_name == github.event.repository.default_branch) }}
+    - name: Cache Go Dependencies (restore)
+      if: ${{ !(inputs.save == 'true' && (true || github.event_name == 'push' && github.ref_name == github.event.repository.default_branch)) }}
       uses: actions/cache/restore@v5
       with:
         path: ${{ steps.cache-paths.outputs.GOMODCACHE }}
@@ -33,17 +37,16 @@ runs:
         restore-keys: go-mod-v1-
 
     # TODO(davdhacs): remove 'true ||' after validating warm cache on PR
-    - name: Cache Go Build
-      if: true || github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+    - name: Cache Go Build (save)
+      if: inputs.save == 'true' && (true || github.event_name == 'push' && github.ref_name == github.event.repository.default_branch)
       uses: actions/cache@v5
       with:
-        path: |
-          ${{ steps.cache-paths.outputs.GOCACHE }}
+        path: ${{ steps.cache-paths.outputs.GOCACHE }}
         key: go-build-v1-${{ github.job }}-${{ steps.cache-paths.outputs.GOARCH }}-${{ steps.cache-paths.outputs.TAG }}
         restore-keys: go-build-v1-${{ github.job }}-${{ steps.cache-paths.outputs.GOARCH }}-
 
-    - name: Cache Go Build
-      if: ${{ !(true || github.event_name == 'push' && github.ref_name == github.event.repository.default_branch) }}
+    - name: Cache Go Build (restore)
+      if: ${{ !(inputs.save == 'true' && (true || github.event_name == 'push' && github.ref_name == github.event.repository.default_branch)) }}
       uses: actions/cache/restore@v5
       with:
         path: ${{ steps.cache-paths.outputs.GOCACHE }}
