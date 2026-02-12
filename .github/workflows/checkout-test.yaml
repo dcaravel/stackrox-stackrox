@@ -23,11 +23,6 @@ jobs:
     env:
       ROX_GIT_REF: ${{ github.event.inputs.ref || '' }}
     steps:
-    # Checkout master to get the latest local actions
-    - name: Checkout repository
-      uses: actions/checkout@v6
-      with:
-        fetch-depth: 0
 
     - name: Checkout specific reference
       uses: actions/checkout@v6
